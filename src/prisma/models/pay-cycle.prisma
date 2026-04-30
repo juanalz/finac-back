@@ -1,0 +1,17 @@
+model PayCycle {
+  id             String       @id @default(uuid())
+  paydayType     PaydayType
+  paydayValue    Int
+  firstPaydate   String
+  lastPayDate    String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  @@map("pay_cycles")
+}
+
+enum PaydayType {
+  FIXED
+  LAST
+}

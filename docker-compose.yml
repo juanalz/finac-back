@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgis/postgis:latest
+    container_name: postgres_finac_db
+    platform: linux/amd64
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+  redis:
+    image: redis:latest
+    container_name: redis_cache_finac_db
+    restart: always
+    ports:
+      - '6381:6379'
+    volumes:
+      - redis_data:/data
+    command: ['redis-server', '--appendonly', 'yes']
+
+volumes:
+  pg_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  kibuz_network:
+    driver: bridge

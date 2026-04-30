@@ -1,0 +1,18 @@
+generator client {
+  provider            = "prisma-client"
+  previewFeatures     = ["prismaSchemaFolder"]
+  output              = "./prisma-client"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model frobnicator {
+  id          String @id @default(uuid())
+  name        String
+  description String
+}

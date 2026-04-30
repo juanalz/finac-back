@@ -1,0 +1,20 @@
+model Transaction {
+  id               String   @id @default(uuid())
+  concept          String
+  amount           Decimal  @db.Decimal(12, 2)
+  type             TransactionType
+  date             String
+  categoryId       String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  category         Category         @relation(fields: [categoryId], references: [id])
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
