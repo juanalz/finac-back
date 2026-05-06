@@ -1,21 +1,35 @@
-import { Injectable } from '@nestjs/common';
-import { cycleForDate, FinancialCycle } from '../helpers/pay-cycles.helpers';
-import { FindOnePayCycleUseCase } from './find-one-pay-cycle.use-case';
+import { Inject, Injectable } from "@nestjs/common";
+import { DomainException } from "src/modules/pino/domain/exceptions/domain.exception";
+import { PayCycleRepositoryInterface } from "src/pay-cycles/domain/repositories/pay-cycle.repository-interface";
+import {
+  cycleFromPayDates,
+  FinancialCycle,
+} from "../helpers/pay-cycles.helpers";
 
 @Injectable()
 export class ResolutionPayCycleUseCase {
   constructor(
-    private readonly findOnePayCycleUseCase: FindOnePayCycleUseCase,
+    @Inject("PayCycleRepositoryInterface")
+    private readonly payCycleRepository: PayCycleRepositoryInterface,
   ) {}
 
   async getCurrentCycle(): Promise<FinancialCycle> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     return this.getCycleForDate(today);
   }
 
   async getCycleForDate(date: string): Promise<FinancialCycle> {
-    console.log('Resolviendo ciclo para fecha:', date);
-    const cfg = await this.findOnePayCycleUseCase.execute();
-    return cycleForDate(date, cfg.firstPaydate, cfg.paydayType, cfg.paydayValue);
+    const payCycle = await this.payCycleRepository.findUnique({
+      conditions: {
+        firstPaydate: { lte: date },
+        lastPayDate: { gte: date },
+      },
+    });
+
+    if (!payCycle) {
+      throw new DomainException(`No pay cycle found for date ${date}`);
+    }
+
+    return cycleFromPayDates(payCycle.firstPaydate, payCycle.lastPayDate);
   }
 }

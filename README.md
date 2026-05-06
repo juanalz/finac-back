@@ -1,6 +1,6 @@
-# Fin.app – Backend NestJS
+# Finac – Backend NestJS
 
-Backend REST API para el dashboard de finanzas personales **Fin.app**.  
+Backend REST API para el dashboard de finanzas personales **Finac**.  
 Construido con **NestJS + TypeORM + SQLite** (sin configuración extra de DB).
 
 ---
@@ -8,7 +8,7 @@ Construido con **NestJS + TypeORM + SQLite** (sin configuración extra de DB).
 ## Estructura del proyecto
 
 ```
-finapp-backend/
+finac-back/
 ├── src/
 │   ├── main.ts                        # Punto de entrada (CORS, Swagger, ValidationPipe)
 │   ├── app.module.ts                  # Módulo raíz (TypeORM SQLite)

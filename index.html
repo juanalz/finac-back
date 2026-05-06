@@ -22,6 +22,27 @@
     .nav-btn:hover, .nav-btn.active { background: rgba(182,255,26,.12); color: var(--accent); }
     .sidebar-footer { margin-top: auto; padding-top: 16px; border-top: 1px solid #1a1f3d; }
 
+    .sidebar-footer {
+      position: relative;
+    }
+
+    .submenu {
+      position: absolute;
+      bottom: 100%; /* 👈 hace que salga hacia ARRIBA */
+      left: 0;
+      display: none;
+      margin-bottom: 5px;
+    }
+
+    .submenu.open {
+      display: block;
+    }
+
+    .sub-item {
+      font-size: 0.9em;
+      padding-left: 20px;
+    }
+
     /* Main */
     main { flex: 1; padding: 24px; overflow-y: auto; }
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -74,8 +95,10 @@
     .cycle-stat strong { display: block; font-size: .95rem; }
 
     /* Config */
-    .config-form { background: var(--panel); border-radius: var(--radius); padding: 24px; max-width: 480px; }
+    .config-layout { display: grid; grid-template-columns: minmax(320px, 480px) minmax(360px, 1fr); gap: 18px; align-items: start; }
+    .config-form, .config-list { background: var(--panel); border-radius: var(--radius); padding: 24px; }
     .config-form h3 { margin-top: 0; }
+    .config-list h3 { margin-top: 0; }
     .form-group { margin-bottom: 16px; }
     .form-group label { display: block; color: var(--muted); font-size: .82rem; margin-bottom: 5px; }
     .form-group input, .form-group select { width: 100%; padding: 9px 12px; background: #1a1f3d; border: 1px solid #252c52; color: var(--text); border-radius: 8px; font-size: .9rem; }
@@ -83,6 +106,17 @@
     .config-status { padding: 10px 14px; border-radius: 8px; font-size: .85rem; margin-bottom: 16px; }
     .config-status.set { background: rgba(182,255,26,.08); border: 1px solid rgba(182,255,26,.3); color: var(--accent); }
     .config-status.unset { background: rgba(255,59,107,.08); border: 1px solid rgba(255,59,107,.3); color: var(--accent2); }
+    .config-actions { display: flex; gap: 10px; }
+    .config-actions .btn { flex: 1; }
+    .pay-cycle-list { display: grid; gap: 10px; }
+    .pay-cycle-item { display: flex; justify-content: space-between; gap: 12px; align-items: center; border: 1px solid #1c2145; border-radius: 8px; padding: 12px; background: #111733; }
+    .pay-cycle-item.active { border-color: var(--accent); }
+    .pay-cycle-title { font-weight: 600; }
+    .pay-cycle-dates { color: var(--muted); font-size: .8rem; margin-top: 3px; }
+    .pay-cycle-meta { color: var(--muted); font-size: .78rem; margin-top: 3px; }
+    .icon-btn { width: 34px; height: 34px; border: 1px solid #252c52; border-radius: 8px; background: #1a1f3d; color: var(--text); cursor: pointer; }
+    .icon-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+    @media (max-width: 900px) { .config-layout { grid-template-columns: 1fr; } }
 
     /* Buttons */
     .btn { background: var(--accent); border: none; padding: 10px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; }
@@ -110,10 +144,16 @@
   <h2>Finac</h2>
   <button class="nav-btn active" id="navDashboard" onclick="showSection('dashboard',this)">📊 Dashboard</button>
   <button class="nav-btn" id="navTransactions" onclick="showSection('transactions',this)">💳 Transacciones</button>
-  <button class="nav-btn" id="navCategories" onclick="showSection('categories',this)">🗂️ Categorías</button>
   <button class="nav-btn" id="navCycles" onclick="showSection('cycles',this)">🔄 Ciclos</button>
   <div class="sidebar-footer">
-    <button class="nav-btn" id="navConfig" onclick="showSection('config',this)">⚙️ Configuración</button>
+    <button class="nav-btn" id="navConfigg" onclick="toggleConfigMenu()">⚙️ Configuración</button>
+
+    <div id="configSubmenu" class="submenu">
+      <button class="nav-btn sub-item" id="navCategories" onclick="showSection('categories',this)">
+        🗂️ Categorías
+      </button>
+      <button class="nav-btn sub-item" id="navConfig" onclick="showSection('config',this)">🔄 Ciclos</button>
+    </div>
   </div>
 </aside>
 
@@ -196,27 +236,41 @@
 
   <!-- Config -->
   <div id="configSection" style="display:none">
-    <div class="config-form">
-      <h3>⚙️ Ciclo de pago</h3>
-      <div id="configStatus" class="config-status unset">⚠️ Sin configuración. Define tu día de nómina para activar los ciclos financieros.</div>
-      <div class="form-group">
-        <label>Tipo de día de pago</label>
-        <select id="cfgPaydayType" onchange="togglePaydayValue()">
-          <option value="FIXED">Día fijo del mes</option>
-          <option value="LAST">Último día del mes</option>
-        </select>
+    <div class="config-layout">
+      <div class="config-form">
+        <h3 id="cycleFormTitle">⚙️ Ciclo de pago</h3>
+        <div id="configStatus" class="config-status unset">⚠️ Sin configuración. Define tu día de nómina para activar los ciclos financieros.</div>
+        <div class="form-group">
+          <label>Tipo de día de pago</label>
+          <select id="cfgPaydayType" onchange="togglePaydayValue()">
+            <option value="FIXED">Día fijo del mes</option>
+            <option value="LAST">Último día del mes</option>
+          </select>
+        </div>
+        <div class="form-group" id="paydayValueGroup">
+          <label>Día del mes (1–28)</label>
+          <input id="cfgPaydayValue" type="number" min="1" max="28" placeholder="Ej: 27">
+          <p class="form-hint">Máximo 28 para evitar problemas en febrero. Usa "Último día" si te pagan a fin de mes.</p>
+        </div>
+        <div class="form-group">
+          <label>Fecha inicial del ciclo (YYYY-MM-DD)</label>
+          <input id="cfgFirstPaydate" type="date">
+          <p class="form-hint">Usa la fecha real guardada para el inicio de este ciclo.</p>
+        </div>
+        <div class="form-group">
+          <label>Fecha final del ciclo (YYYY-MM-DD)</label>
+          <input id="cfgLastPayDate" type="date">
+          <p class="form-hint">Usa la fecha real guardada para el cierre de este ciclo.</p>
+        </div>
+        <div class="config-actions">
+          <button class="btn-outline" id="cancelCycleEditBtn" onclick="resetCycleForm()" style="display:none">Cancelar</button>
+          <button class="btn" id="saveCycleBtn" onclick="saveConfig()">Guardar ciclo</button>
+        </div>
       </div>
-      <div class="form-group" id="paydayValueGroup">
-        <label>Día del mes (1–28)</label>
-        <input id="cfgPaydayValue" type="number" min="1" max="28" placeholder="Ej: 27">
-        <p class="form-hint">Máximo 28 para evitar problemas en febrero. Usa "Último día" si te pagan a fin de mes.</p>
+      <div class="config-list">
+        <h3>Ciclos guardados</h3>
+        <div id="savedCyclesList" class="pay-cycle-list"></div>
       </div>
-      <div class="form-group">
-        <label>Fecha del primer pago registrado (YYYY-MM-DD)</label>
-        <input id="cfgFirstPaydate" type="date">
-        <p class="form-hint">Ancla todos tus ciclos. Usa la fecha real de tu nómina más antigua.</p>
-      </div>
-      <button class="btn" onclick="saveConfig()">Guardar configuración</button>
     </div>
   </div>
 </main>
@@ -278,6 +332,8 @@
   let cycleMode = false;
   let currentCycleDate = null;   // null = today
   let cycleConfigured = false;
+  let editingPayCycleId = null;
+  let savedPayCycles = [];
 
   // ── Utils ──────────────────────────────────────────────────────
   const fmt = n => '$' + Number(n).toLocaleString('es-CO');
@@ -320,6 +376,8 @@
 
     const showBanner = cycleConfigured && (name === 'dashboard' || name === 'transactions');
     document.getElementById('cycleBanner').classList.toggle('hidden', !showBanner);
+
+    document.getElementById("configSubmenu").classList.remove("open");
 
     if (name === 'dashboard') renderDashboard();
     if (name === 'transactions') { txPage = 1; loadTransactions(); }
@@ -544,20 +602,41 @@
 
   // ── Config ─────────────────────────────────────────────────────
   async function loadConfigForm() {
+    await renderSavedCycles();
     const el = document.getElementById('configStatus');
-    try {
-      const cfg = await apiFetch('/pay-cycles/config');
-      el.className = 'config-status set';
-      const dayDesc = cfg.paydayType === 'last' ? 'último día del mes' : `día ${cfg.paydayValue}`;
-      el.textContent = `✅ Configurado: ${dayDesc}, primer pago: ${cfg.firstPaydate}`;
-      document.getElementById('cfgPaydayType').value = cfg.paydayType;
-      document.getElementById('cfgPaydayValue').value = cfg.paydayValue;
-      document.getElementById('cfgFirstPaydate').value = cfg.firstPaydate;
-    } catch {
+    if (!savedPayCycles.length) {
       el.className = 'config-status unset';
       el.textContent = '⚠️ Sin configuración guardada.';
+      resetCycleForm(false);
+    } else {
+      el.className = 'config-status set';
+      el.textContent = `✅ ${savedPayCycles.length} ciclo${savedPayCycles.length === 1 ? '' : 's'} guardado${savedPayCycles.length === 1 ? '' : 's'}.`;
     }
     togglePaydayValue();
+  }
+
+  async function renderSavedCycles() {
+    const container = document.getElementById('savedCyclesList');
+    try {
+      savedPayCycles = await apiFetch('/pay-cycles/saved');
+      savedPayCycles.sort((a, b) => b.firstPaydate.localeCompare(a.firstPaydate));
+      container.innerHTML = savedPayCycles.length
+        ? savedPayCycles.map(c => {
+          const typeLabel = c.paydayType === 'LAST' ? 'Último día' : `Día ${c.paydayValue}`;
+          return `
+            <div class="pay-cycle-item ${editingPayCycleId === c.id ? 'active' : ''}">
+              <div>
+                <div class="pay-cycle-title">${c.firstPaydate} → ${c.lastPayDate}</div>
+                <div class="pay-cycle-meta">${typeLabel}</div>
+              </div>
+              <button class="icon-btn" onclick='editPayCycle(${JSON.stringify(c)})' title="Editar ciclo">✎</button>
+            </div>`;
+        }).join('')
+        : '<p style="color:var(--muted);font-size:.85rem;margin:0">No hay ciclos guardados.</p>';
+    } catch (e) {
+      savedPayCycles = [];
+      container.innerHTML = `<p style="color:var(--accent2);font-size:.85rem;margin:0">${e.message}</p>`;
+    }
   }
 
   function togglePaydayValue() {
@@ -565,22 +644,60 @@
     document.getElementById('paydayValueGroup').style.display = type === 'FIXED' ? '' : 'none';
   }
 
+  function editPayCycle(cycle) {
+    editingPayCycleId = cycle.id;
+    document.getElementById('cycleFormTitle').textContent = 'Editar ciclo';
+    document.getElementById('cfgPaydayType').value = cycle.paydayType;
+    document.getElementById('cfgPaydayValue').value = cycle.paydayValue;
+    document.getElementById('cfgFirstPaydate').value = cycle.firstPaydate;
+    document.getElementById('cfgLastPayDate').value = cycle.lastPayDate;
+    document.getElementById('saveCycleBtn').textContent = 'Guardar edición';
+    document.getElementById('cancelCycleEditBtn').style.display = '';
+    togglePaydayValue();
+    renderSavedCycles();
+  }
+
+  function resetCycleForm(refreshList = true) {
+    editingPayCycleId = null;
+    document.getElementById('cycleFormTitle').textContent = '⚙️ Ciclo de pago';
+    document.getElementById('cfgPaydayType').value = 'FIXED';
+    document.getElementById('cfgPaydayValue').value = '';
+    document.getElementById('cfgFirstPaydate').value = '';
+    document.getElementById('cfgLastPayDate').value = '';
+    document.getElementById('saveCycleBtn').textContent = 'Guardar ciclo';
+    document.getElementById('cancelCycleEditBtn').style.display = 'none';
+    togglePaydayValue();
+    if (refreshList) renderSavedCycles();
+  }
+
   async function saveConfig() {
+    const btn = document.getElementById('saveCycleBtn');
+    btn.disabled = true;
     const body = {
       paydayType: document.getElementById('cfgPaydayType').value,
       firstPaydate: document.getElementById('cfgFirstPaydate').value,
+      lastPayDate: document.getElementById('cfgLastPayDate').value,
     };
     if (body.paydayType === 'FIXED') {
       body.paydayValue = Number(document.getElementById('cfgPaydayValue').value);
+    } else {
+      body.paydayValue = 31;
     }
     try {
-    console.log(body);
-      await apiFetch('/pay-cycles/config', { method: 'PUT', body: JSON.stringify(body) });
+      if (editingPayCycleId) {
+        await apiFetch(`/pay-cycles/${editingPayCycleId}`, { method: 'PATCH', body: JSON.stringify(body) });
+        toast('Ciclo actualizado ✓');
+      } else {
+        await apiFetch('/pay-cycles/config', { method: 'PUT', body: JSON.stringify(body) });
+        toast('Ciclo guardado ✓');
+      }
       cycleConfigured = true;
-      toast('Configuración guardada ✓');
-      loadConfigForm();
+      resetCycleForm(false);
+      await loadConfigForm();
     } catch (e) {
       toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
     }
   }
 
@@ -693,6 +810,11 @@
     }
   }
 
+  function toggleConfigMenu() {
+    const submenu = document.getElementById("configSubmenu");
+    submenu.classList.toggle("open");
+  }
+
   // ── Re-render current section ───────────────────────────────────
   function renderCurrentSection() {
     const visible = SECTIONS.find(s => document.getElementById(s + 'Section').style.display !== 'none') ?? 'dashboard';
@@ -700,6 +822,7 @@
     if (visible === 'transactions') return loadTransactions();
     if (visible === 'cycles') return renderCyclesHistory();
     if (visible === 'categories') return renderCategories();
+    if (visible === 'config') return loadConfigForm();
     return Promise.resolve();
   }
 
