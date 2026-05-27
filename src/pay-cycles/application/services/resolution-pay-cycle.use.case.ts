@@ -18,9 +18,10 @@ export class ResolutionPayCycleUseCase {
     return this.getCycleForDate(today);
   }
 
-  async getCycleForDate(date: string): Promise<FinancialCycle> {
+  async getCycleForDate(date: string, userId?: string): Promise<FinancialCycle> {
     const payCycle = await this.payCycleRepository.findUnique({
       conditions: {
+        userId,
         firstPaydate: { lte: date },
         lastPayDate: { gte: date },
       },

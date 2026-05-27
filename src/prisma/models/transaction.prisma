@@ -5,11 +5,13 @@ model Transaction {
   type             TransactionType
   date             String
   categoryId       String
+  userId           String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
 
   category         Category         @relation(fields: [categoryId], references: [id])
+  user             User?            @relation(fields: [userId], references: [id])
 
   @@map("transactions")
 }

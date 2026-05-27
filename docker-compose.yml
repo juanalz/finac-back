@@ -29,5 +29,5 @@ volumes:
     driver: local
 
 networks:
-  kibuz_network:
+  finac_network:
     driver: bridge

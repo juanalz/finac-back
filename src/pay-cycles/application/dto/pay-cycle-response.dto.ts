@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { PayCycle } from "../../domain/entities/pay-cycle.entity";
 import { PaydayType } from "../../domain/entities/pay-cycle.entity";
 
@@ -28,12 +28,16 @@ export class PayCycleResponseDto {
   })
   lastPayDate: string;
 
+  @ApiPropertyOptional({ example: "fb160441-660f-4e4d-af0b-b65d1a368b6f" })
+  userId?: string | null;
+
   constructor(payCycle: PayCycle) {
     this.id = payCycle.id ?? "";
     this.paydayType = payCycle.paydayType;
     this.paydayValue = payCycle.paydayValue;
     this.firstPaydate = payCycle.firstPaydate;
     this.lastPayDate = payCycle.lastPayDate;
+    this.userId = payCycle.userId;
   }
 
   static fromEntities(payCycle: PayCycle): PayCycleResponseDto {

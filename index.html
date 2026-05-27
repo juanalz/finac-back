@@ -136,11 +136,31 @@
     .toast.show { opacity: 1; }
     .toast.error { border-left: 3px solid var(--accent2); }
     .toast.success { border-left: 3px solid var(--accent); }
+    .hidden { display: none !important; }
+    .login-screen { position: fixed; inset: 0; display: grid; place-items: center; background: linear-gradient(180deg,#070816,#0b0f2a); z-index: 1000; padding: 24px; }
+    .login-card { width: min(380px, 100%); background: var(--panel); border: 1px solid #1c2145; border-radius: var(--radius); padding: 28px; box-shadow: 0 18px 60px rgba(0,0,0,.35); }
+    .login-card h1 { color: var(--accent); margin: 0 0 6px; }
+    .login-card p { color: var(--muted); margin: 0 0 20px; font-size: .9rem; }
+    .login-card label { display: block; color: var(--muted); font-size: .82rem; margin-bottom: 5px; }
+    .login-card input { width: 100%; padding: 10px 12px; background: #1a1f3d; border: 1px solid #252c52; color: var(--text); border-radius: 8px; font-size: .9rem; margin-bottom: 14px; }
+    .user-chip { color: var(--muted); font-size: .82rem; margin-right: 10px; }
   </style>
 </head>
 <body>
 
-<aside>
+<div id="loginScreen" class="login-screen">
+  <form class="login-card" onsubmit="login(event)">
+    <h1>Finac</h1>
+    <p>Ingresa con tu usuario para continuar.</p>
+    <label>Usuario</label>
+    <input id="loginUsername" autocomplete="username" placeholder="admin o user">
+    <label>Contraseña</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••">
+    <button class="btn" id="loginBtn" style="width:100%" type="submit">Entrar</button>
+  </form>
+</div>
+
+<aside id="sidebar" class="hidden">
   <h2>Finac</h2>
   <button class="nav-btn active" id="navDashboard" onclick="showSection('dashboard',this)">📊 Dashboard</button>
   <button class="nav-btn" id="navTransactions" onclick="showSection('transactions',this)">💳 Transacciones</button>
@@ -153,14 +173,19 @@
         🗂️ Categorías
       </button>
       <button class="nav-btn sub-item" id="navConfig" onclick="showSection('config',this)">🔄 Ciclos</button>
+      <button class="nav-btn sub-item" id="navUsers" onclick="showSection('users',this)">👤 Usuarios</button>
     </div>
   </div>
 </aside>
 
-<main>
+<main id="appMain" class="hidden">
   <header>
-    <h1 id="pageTitle">Hola Juan Alzate 👋</h1>
-    <button class="btn" onclick="openTxModal()">+ Nueva transacción</button>
+    <h1 id="pageTitle"></h1>
+    <div>
+      <span class="user-chip" id="userChip"></span>
+      <button class="btn-outline" onclick="logout()" style="margin-right:8px">Salir</button>
+      <button class="btn" onclick="openTxModal()">+ Nueva transacción</button>
+    </div>
   </header>
 
   <!-- Cycle banner -->
@@ -273,6 +298,43 @@
       </div>
     </div>
   </div>
+
+  <!-- Users -->
+  <div id="usersSection" style="display:none">
+    <div class="config-layout">
+      <div class="config-form">
+        <h3>Registrar usuario</h3>
+        <div class="form-group">
+          <label>Usuario</label>
+          <input id="newUsername" autocomplete="off" placeholder="Ej: maria">
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input id="newUserPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="form-group">
+          <label>Rol</label>
+          <select id="newUserRole">
+            <option value="USER">USER</option>
+            <option value="ADMIN">ADMIN</option>
+          </select>
+        </div>
+        <button class="btn" id="saveUserBtn" onclick="saveUser()" style="width:100%">Registrar usuario</button>
+      </div>
+      <div class="config-list">
+        <h3>Usuarios registrados</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Rol</th>
+            </tr>
+          </thead>
+          <tbody id="usersList"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </main>
 
 <!-- Transaction dialog -->
@@ -334,9 +396,20 @@
   let cycleConfigured = false;
   let editingPayCycleId = null;
   let savedPayCycles = [];
+  let accessToken = localStorage.getItem('finacToken');
+  let currentUser = parseStoredUser();
 
   // ── Utils ──────────────────────────────────────────────────────
   const fmt = n => '$' + Number(n).toLocaleString('es-CO');
+
+  function parseStoredUser() {
+    try {
+      return JSON.parse(localStorage.getItem('finacUser') || 'null');
+    } catch {
+      localStorage.removeItem('finacUser');
+      return null;
+    }
+  }
 
   function toast(msg, type = 'success') {
     const el = document.getElementById('toast');
@@ -346,14 +419,66 @@
   }
 
   async function apiFetch(path, opts = {}) {
-    const res = await fetch(API + path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers ?? {}) };
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+    const res = await fetch(API + path, { ...opts, headers });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       const msg = Array.isArray(err.message) ? err.message.join(', ') : (err.message || `HTTP ${res.status}`);
+      if (res.status === 401 && path !== '/auth/login') {
+        logout(false);
+      }
       throw new Error(msg);
     }
     if (res.status === 204) return null;
     return res.json();
+  }
+
+  async function login(event) {
+    event.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    try {
+      const res = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          username: document.getElementById('loginUsername').value.trim(),
+          password: document.getElementById('loginPassword').value,
+        }),
+      });
+
+      accessToken = res.accessToken;
+      currentUser = res.user;
+      localStorage.setItem('finacToken', accessToken);
+      localStorage.setItem('finacUser', JSON.stringify(currentUser));
+      await bootApp();
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function logout(showToast = true) {
+    accessToken = null;
+    currentUser = null;
+    localStorage.removeItem('finacToken');
+    localStorage.removeItem('finacUser');
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('sidebar').classList.add('hidden');
+    document.getElementById('appMain').classList.add('hidden');
+    if (showToast) toast('Sesión cerrada ✓');
+  }
+
+  function applyAuthState() {
+    const isAdmin = currentUser?.role === 'ADMIN';
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('sidebar').classList.remove('hidden');
+    document.getElementById('appMain').classList.remove('hidden');
+    document.getElementById('navCategories').style.display = isAdmin ? '' : 'none';
+    document.getElementById('navUsers').style.display = isAdmin ? '' : 'none';
+    document.getElementById('userChip').textContent = `${currentUser.username} · ${currentUser.role}`;
   }
 
   function addDays(isoDate, n) {
@@ -363,10 +488,15 @@
   }
 
   // ── Navigation ─────────────────────────────────────────────────
-  const SECTIONS = ['dashboard', 'transactions', 'categories', 'cycles', 'config'];
-  const TITLES = { dashboard: 'Hola 👋', transactions: 'Transacciones', categories: 'Categorías', cycles: 'Ciclos financieros', config: 'Configuración' };
+  const SECTIONS = ['dashboard', 'transactions', 'categories', 'cycles', 'config', 'users'];
+  const TITLES = { dashboard: `Hola 👋 ${currentUser.username}`, transactions: 'Transacciones', categories: 'Categorías', cycles: 'Ciclos financieros', config: 'Configuración', users: 'Usuarios' };
 
   function showSection(name, btn) {
+    if ((name === 'categories' || name === 'users') && currentUser?.role !== 'ADMIN') {
+      toast('No tienes permisos para ver esta sección.', 'error');
+      return showSection('dashboard', document.getElementById('navDashboard'));
+    }
+
     SECTIONS.forEach(s => {
       document.getElementById(s + 'Section').style.display = s === name ? '' : 'none';
     });
@@ -384,11 +514,13 @@
     if (name === 'categories') renderCategories();
     if (name === 'cycles') renderCyclesHistory();
     if (name === 'config') loadConfigForm();
+    if (name === 'users') renderUsers();
   }
 
   // ── Cycle mode ─────────────────────────────────────────────────
   async function checkCycleConfig() {
-    try { await apiFetch('/pay-cycles/config'); cycleConfigured = true; }
+    const today = new Date().toISOString().split('T')[0];
+    try { await apiFetch(`/pay-cycles/resolve?userId=${currentUser.sub}&date=${today}`); cycleConfigured = true; }
     catch { cycleConfigured = false; }
   }
 
@@ -406,7 +538,7 @@
 
   async function navigateCycle(delta) {
     const anchor = currentCycleDate ?? new Date().toISOString().split('T')[0];
-    const cycle = await apiFetch(`/pay-cycles/resolve?date=${anchor}`);
+    const cycle = await apiFetch(`/pay-cycles/resolve?userId=${currentUser.sub}&date=${anchor}`);
     currentCycleDate = delta < 0
       ? addDays(cycle.startDate, -1)   // day before → prev cycle
       : addDays(cycle.endDate, 1);     // day after  → next cycle
@@ -431,9 +563,9 @@
   // ── Dashboard ──────────────────────────────────────────────────
   async function renderDashboard() {
     const qs = cycleMode && cycleConfigured
-      ? `?useCycle=true&cycleDate=${currentCycleDate ?? new Date().toISOString().split('T')[0]}`
+      ? `&useCycle=true&cycleDate=${currentCycleDate ?? new Date().toISOString().split('T')[0]}`
       : '';
-    const s = await apiFetch('/pay-cycles/summary' + qs);
+    const s = await apiFetch(`/pay-cycles/summary?userId=${currentUser.sub}` + qs);
     if (s.cycle) updateBanner(s.cycle);
 
     document.getElementById('income').textContent = fmt(s.income);
@@ -476,7 +608,7 @@
 
   // ── Transactions ───────────────────────────────────────────────
   async function loadTransactions() {
-    const res = await apiFetch(`/transactions?page=${txPage}&limit=${LIMIT}${cycleParams()}`);
+    const res = await apiFetch(`/transactions?userId=${currentUser.sub}&page=${txPage}&limit=${LIMIT}${cycleParams()}`);
     if (res.cycle) updateBanner(res.cycle);
     totalPages = res.totalPages || 1;
 
@@ -524,7 +656,7 @@
     container.innerHTML = '<p style="color:var(--muted)">Cargando…</p>';
 
     try {
-      const cycles = await apiFetch('/pay-cycles');
+      const cycles = await apiFetch(`/pay-cycles?userId=${currentUser.sub}`);
       if (!cycles.length) {
         container.innerHTML = '<p style="color:var(--muted)">No hay ciclos con transacciones aún.</p>';
         return;
@@ -701,6 +833,47 @@
     }
   }
 
+  // ── Users ──────────────────────────────────────────────────────
+  async function renderUsers() {
+    const container = document.getElementById('usersList');
+    try {
+      const users = await apiFetch('/users');
+      container.innerHTML = users.length
+        ? users.map(user => `
+          <tr>
+            <td>${user.username}</td>
+            <td>${user.role}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="2" style="color:var(--muted);text-align:center;padding:24px">Sin usuarios registrados.</td></tr>';
+    } catch (e) {
+      container.innerHTML = `<tr><td colspan="2" style="color:var(--accent2);text-align:center;padding:24px">${e.message}</td></tr>`;
+    }
+  }
+
+  async function saveUser() {
+    const btn = document.getElementById('saveUserBtn');
+    btn.disabled = true;
+
+    const body = {
+      username: document.getElementById('newUsername').value.trim(),
+      password: document.getElementById('newUserPassword').value,
+      role: document.getElementById('newUserRole').value,
+    };
+
+    try {
+      await apiFetch('/users', { method: 'POST', body: JSON.stringify(body) });
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newUserPassword').value = '';
+      document.getElementById('newUserRole').value = 'USER';
+      toast('Usuario registrado ✓');
+      await renderUsers();
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   // ── Transactions CRUD ──────────────────────────────────────────
   const txModal = document.getElementById('txModal');
 
@@ -823,22 +996,38 @@
     if (visible === 'cycles') return renderCyclesHistory();
     if (visible === 'categories') return renderCategories();
     if (visible === 'config') return loadConfigForm();
+    if (visible === 'users') return renderUsers();
     return Promise.resolve();
   }
 
   // ── Boot ────────────────────────────────────────────────────────
-  (async () => {
+  async function bootApp() {
+    if (!accessToken) {
+      logout(false);
+      return;
+    }
+
+    try {
+      currentUser = await apiFetch('/auth/me');
+      localStorage.setItem('finacUser', JSON.stringify(currentUser));
+    } catch {
+      return;
+    }
+
+    applyAuthState();
     await checkCycleConfig();
     await loadCategories();
-    await renderDashboard();
+    showSection('dashboard', document.getElementById('navDashboard'));
 
     if (cycleConfigured) {
       document.getElementById('cycleBanner').classList.remove('hidden');
       const today = new Date().toISOString().split('T')[0];
-      const cycle = await apiFetch(`/pay-cycles/resolve?date=${today}`);
+      const cycle = await apiFetch(`/pay-cycles/resolve?userId=${currentUser.sub}&date=${today}`);
       updateBanner(cycle);
     }
-  })();
+  }
+
+  bootApp();
 </script>
 </body>
 </html>

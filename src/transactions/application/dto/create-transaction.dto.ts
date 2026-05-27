@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsString,
   IsNotEmpty,
@@ -9,17 +9,20 @@ import {
   IsOptional,
   IsUUID,
   MaxLength,
-} from 'class-validator';
-import { TransactionType } from '../../domain/entities/transaction.entity';
+} from "class-validator";
+import { TransactionType } from "../../domain/entities/transaction.entity";
 
 export class CreateTransactionDto {
-  @ApiProperty({ example: 'Pago de arriendo', description: 'Descripción de la transacción' })
+  @ApiProperty({
+    example: "Pago de arriendo",
+    description: "Descripción de la transacción",
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(120)
   concept: string;
 
-  @ApiProperty({ example: 1500000, description: 'Monto (debe ser positivo)' })
+  @ApiProperty({ example: 1500000, description: "Monto (debe ser positivo)" })
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
   amount: number;
@@ -28,12 +31,22 @@ export class CreateTransactionDto {
   @IsEnum(TransactionType)
   type: TransactionType;
 
-  @ApiProperty({ example: '2024-03-15', description: 'Fecha en formato YYYY-MM-DD' })
+  @ApiProperty({
+    example: "2024-03-15",
+    description: "Fecha en formato YYYY-MM-DD",
+  })
   @IsDateString()
   date: string;
 
-  @ApiPropertyOptional({ example: 'fb160441-660f-4e4d-af0b-b65d1a368b6f', description: 'ID de la categoría (UUID)' })
+  @ApiPropertyOptional({
+    example: "fb160441-660f-4e4d-af0b-b65d1a368b6f",
+    description: "ID de la categoría (UUID)",
+  })
   @IsOptional()
   @IsUUID()
   categoryId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  userId?: string;
 }

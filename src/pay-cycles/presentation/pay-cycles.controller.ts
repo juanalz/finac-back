@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Req,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
@@ -30,6 +31,11 @@ import { UpdatePayCycleDto } from "../application/dto/update-pay-cycle.dto";
 import { ResolutionPayCycleUseCase } from "../application/services/resolution-pay-cycle.use.case";
 import { SummaryPayCycleUseCase } from "../application/services/summary-pay-cycle-use-case";
 import { CycleSummary } from "../application/helpers/pay-cycles.helpers";
+import { Roles } from "src/auth/application/decorators/roles.decorator";
+import { Role } from "src/auth/domain/role.enum";
+import { Request } from "express";
+import { AuthenticatedUser } from "src/auth/domain/authenticated-user";
+import { S } from "node_modules/@faker-js/faker/dist/airline-eVQV6kbz";
 
 @ApiTags("pay-cycles")
 @Controller("pay-cycles")
@@ -47,6 +53,7 @@ export class PayCyclesController {
   // ── Configuration ──────────────────────────────────────────────────────────
 
   @Get("config")
+  @Roles(Role.ADMIN, Role.USER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Get the active pay-cycle configuration" })
   @ApiResponse({ status: 200, type: PayCycleResponseDto })
@@ -55,6 +62,7 @@ export class PayCyclesController {
   }
 
   @Get("saved")
+  @Roles(Role.ADMIN, Role.USER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Get saved pay-cycle records" })
   @ApiResponse({ status: 200, type: PayCycleResponseDto, isArray: true })
@@ -81,6 +89,7 @@ export class PayCyclesController {
   //   }
 
   @Patch(":id")
+  @Roles(Role.ADMIN, Role.USER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Update a pay-cycle record" })
   @ApiParam({ name: "id", type: String })
@@ -94,15 +103,23 @@ export class PayCyclesController {
   }
 
   @Put("config")
+  @Roles(Role.ADMIN, Role.USER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Create or replace the pay-cycle configuration" })
   @ApiResponse({ status: 200, type: PayCycleResponseDto })
   @ApiResponse({ status: 404, description: "Pay-cycle not found" })
-  update(@Body() dto: CreatePayCycleDto): Promise<PayCycleResponseDto> {
-    return this.createPayCycleUseCase.execute(dto);
+  update(
+    @Body() dto: CreatePayCycleDto,
+    @Req() request: Request & { user: AuthenticatedUser },
+  ): Promise<PayCycleResponseDto> {
+    return this.createPayCycleUseCase.execute({
+      ...dto,
+      userId: request.user.sub,
+    });
   }
 
   @Delete(":id")
+  @Roles(Role.ADMIN, Role.USER)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete a pay-cycle" })
   @ApiParam({ name: "id", type: String })
@@ -151,8 +168,11 @@ export class PayCyclesController {
       },
     },
   })
-  resolveCycle(@Query("date") date: string) {
-    return this.resolutionPayCycleUseCase.getCycleForDate(date);
+  resolveCycle(
+    @Query("userId") userId: string,
+    @Query("date") date: string
+  ) {
+    return this.resolutionPayCycleUseCase.getCycleForDate(date, userId);
   }
 
   // ── Summaries ──────────────────────────────────────────────────────────────
@@ -191,8 +211,11 @@ export class PayCyclesController {
       },
     },
   })
-  getCycleSummary(@Query("date") date?: string): Promise<CycleSummary> {
-    return this.summaryPayCycleUseCase.getCycleSummary(date);
+  getCycleSummary(
+    @Query("userId") userId: string,
+    @Query("date") date?: string
+  ): Promise<CycleSummary> {
+    return this.summaryPayCycleUseCase.getCycleSummary(userId, date);
   }
 
   @Get()
@@ -206,9 +229,10 @@ export class PayCyclesController {
   @ApiQuery({ name: "to", required: false, example: "2024-12-31" })
   @ApiResponse({ status: 200, description: "Array of cycle summaries" })
   getAllCycles(
+    @Query("userId") userId: string,
     @Query("from") from?: string,
     @Query("to") to?: string,
   ): Promise<CycleSummary[]> {
-    return this.findAllPayCyclesUseCase.getAllCycles(from, to);
+    return this.findAllPayCyclesUseCase.getAllCycles(userId, from, to);
   }
 }

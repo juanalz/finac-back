@@ -1,6 +1,6 @@
 export enum PaydayType {
-  FIXED = 'FIXED',
-  LAST = 'LAST',
+  FIXED = "FIXED",
+  LAST = "LAST",
 }
 
 export interface PayCycleProps {
@@ -9,6 +9,7 @@ export interface PayCycleProps {
   paydayValue: number;
   firstPaydate: string;
   lastPayDate: string;
+  userId?: string | null;
 }
 
 export class PayCycle {
@@ -17,6 +18,7 @@ export class PayCycle {
   public readonly paydayValue: number;
   public readonly firstPaydate: string;
   public readonly lastPayDate: string;
+  public readonly userId?: string | null;
 
   constructor(props: PayCycleProps) {
     this.id = props.id;
@@ -24,6 +26,7 @@ export class PayCycle {
     this.paydayValue = props.paydayValue;
     this.firstPaydate = props.firstPaydate;
     this.lastPayDate = props.lastPayDate;
+    this.userId = props.userId;
   }
 
   static fromPrisma(data: PayCycleProps): PayCycle {

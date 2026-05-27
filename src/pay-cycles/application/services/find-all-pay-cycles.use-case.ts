@@ -26,7 +26,7 @@ export class FindAllPayCyclesUseCase {
     return payCycles.map((pc) => PayCycleResponseDto.fromEntities(pc));
   }
 
-  async getAllCycles(from?: string, to?: string): Promise<CycleSummary[]> {
+  async getAllCycles(userId: string, from?: string, to?: string): Promise<CycleSummary[]> {
     const earliest = (await this.transactionRepository.aggregate())._min;
     const latest = (await this.transactionRepository.aggregate())._max;
 
@@ -40,6 +40,7 @@ export class FindAllPayCyclesUseCase {
 
     const payCycles = await this.payCycleRepository.findMany({
       conditions: {
+        userId: userId,
         firstPaydate: { lte: rangeTo },
         lastPayDate: { gte: rangeFrom },
       },
@@ -52,7 +53,7 @@ export class FindAllPayCyclesUseCase {
       .sort((a, b) => compareDates(a.startDate, b.startDate));
 
     const summaries = await Promise.all(
-      cycles.map((c) => this.summaryPayCycleUseCase.buildCycleSummary(c)),
+      cycles.map((c) => this.summaryPayCycleUseCase.buildCycleSummary(userId, c)),
     );
 
     return summaries.reverse().filter((s) => s.transactionCount > 0);

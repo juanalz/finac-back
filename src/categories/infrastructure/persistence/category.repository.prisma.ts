@@ -14,6 +14,7 @@ export class CategoryPrismaRepository implements CategoryRepositoryInterface {
   async findMany({ conditions }: { conditions: Prisma.CategoryWhereInput }): Promise<Category[]> {
     const categories = await this.prisma.category.findMany({
       where: conditions,
+      orderBy: { name: "asc" },
     });
 
     if (!categories) return [];

@@ -1,21 +1,25 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { TransactionRepositoryInterface, PaginatedTransactions } from 'src/transactions/domain/repositories/transaction.repository-interface';
-import { QueryTransactionDto } from '../dto/query-transaction.dto';
+import { Inject, Injectable } from "@nestjs/common";
+import {
+  TransactionRepositoryInterface,
+  PaginatedTransactions,
+} from "src/transactions/domain/repositories/transaction.repository-interface";
+import { QueryTransactionDto } from "../dto/query-transaction.dto";
 
 @Injectable()
 export class FindAllTransactionsUseCase {
   constructor(
-    @Inject('TransactionRepositoryInterface')
+    @Inject("TransactionRepositoryInterface")
     private readonly transactionRepository: TransactionRepositoryInterface,
   ) {}
 
   async execute(query: QueryTransactionDto): Promise<PaginatedTransactions> {
-    const { type, categoryId, from, to, page = 1, limit = 20 } = query;
+    const { type, categoryId, userId, from, to, page = 1, limit = 20 } = query;
 
     const conditions: any = {};
 
     if (type) conditions.type = type;
     if (categoryId) conditions.categoryId = categoryId;
+    if (userId) conditions.userId = userId;
     if (from || to) {
       conditions.date = {
         ...(from ? { gte: from } : {}),
@@ -23,6 +27,9 @@ export class FindAllTransactionsUseCase {
       };
     }
 
-    return this.transactionRepository.findMany({ conditions, pagination: { page, limit } });
+    return this.transactionRepository.findMany({
+      conditions,
+      pagination: { page, limit },
+    });
   }
 }

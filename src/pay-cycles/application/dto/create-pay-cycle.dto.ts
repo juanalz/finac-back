@@ -1,5 +1,14 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEnum, IsInt, IsNotEmpty, IsString, Max, Min } from "class-validator";
+import {
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from "class-validator";
 import { PaydayType } from "../../domain/entities/pay-cycle.entity";
 
 export class CreatePayCycleDto {
@@ -35,4 +44,8 @@ export class CreatePayCycleDto {
   @IsString()
   @IsNotEmpty()
   lastPayDate: string;
+
+  @IsOptional()
+  @IsUUID()
+  userId?: string;
 }

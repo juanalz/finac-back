@@ -12,16 +12,16 @@ export class SummaryPayCycleUseCase {
     private readonly resolutionPayCycleUseCase: ResolutionPayCycleUseCase,
   ) {}
 
-  async getCycleSummary(cycleStart?: string): Promise<CycleSummary> {
+  async getCycleSummary(userId: string, cycleStart?: string): Promise<CycleSummary> {
     const anchor = cycleStart ?? new Date().toISOString().split("T")[0];
     const cycle = await this.resolutionPayCycleUseCase.getCycleForDate(anchor);
 
-    return this.buildCycleSummary(cycle);
+    return this.buildCycleSummary(userId, cycle);
   }
 
-  async buildCycleSummary(cycle: FinancialCycle): Promise<CycleSummary> {
+  async buildCycleSummary(userId: string, cycle: FinancialCycle): Promise<CycleSummary> {
     const transactions = await this.transactionRepository.findAll({
-      conditions: { date: { gte: cycle.startDate, lte: cycle.endDate } },
+      conditions: { userId, date: { gte: cycle.startDate, lte: cycle.endDate } },
     });
 
     let income = 0;

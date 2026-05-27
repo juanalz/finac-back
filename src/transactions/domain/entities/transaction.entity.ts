@@ -1,8 +1,8 @@
 import { Category } from "src/prisma/prisma-client/client";
 
 export enum TransactionType {
-  INCOME = 'INCOME',
-  EXPENSE = 'EXPENSE',
+  INCOME = "INCOME",
+  EXPENSE = "EXPENSE",
 }
 
 export interface TransactionProps {
@@ -12,6 +12,7 @@ export interface TransactionProps {
   type: TransactionType;
   date: string;
   categoryId?: string;
+  userId?: string | null;
   category?: Category;
 }
 
@@ -22,6 +23,7 @@ export class Transaction {
   public readonly type: TransactionType;
   public readonly date: string;
   public readonly categoryId?: string;
+  public readonly userId?: string | null;
   public readonly category?: Category;
 
   constructor(props: TransactionProps) {
@@ -31,6 +33,7 @@ export class Transaction {
     this.type = props.type;
     this.date = props.date;
     this.categoryId = props.categoryId;
+    this.userId = props.userId;
     this.category = props.category;
   }
 
