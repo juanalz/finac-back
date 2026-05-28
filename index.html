@@ -750,7 +750,7 @@
   async function renderSavedCycles() {
     const container = document.getElementById('savedCyclesList');
     try {
-      savedPayCycles = await apiFetch('/pay-cycles/saved');
+      savedPayCycles = await apiFetch(`/pay-cycles/saved?userId=${currentUser.sub}`);
       savedPayCycles.sort((a, b) => b.firstPaydate.localeCompare(a.firstPaydate));
       container.innerHTML = savedPayCycles.length
         ? savedPayCycles.map(c => {

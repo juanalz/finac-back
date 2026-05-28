@@ -19,9 +19,9 @@ export class FindAllPayCyclesUseCase {
     private readonly summaryPayCycleUseCase: SummaryPayCycleUseCase,
   ) {}
 
-  async execute(): Promise<PayCycleResponseDto[]> {
+  async execute(userId: string): Promise<PayCycleResponseDto[]> {
     const payCycles = await this.payCycleRepository.findMany({
-      conditions: {},
+      conditions: { userId: userId },
     });
     return payCycles.map((pc) => PayCycleResponseDto.fromEntities(pc));
   }

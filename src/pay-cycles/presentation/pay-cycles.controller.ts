@@ -66,8 +66,10 @@ export class PayCyclesController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Get saved pay-cycle records" })
   @ApiResponse({ status: 200, type: PayCycleResponseDto, isArray: true })
-  findSaved(): Promise<PayCycleResponseDto[]> {
-    return this.findAllPayCyclesUseCase.execute();
+  findSaved(
+    @Query("userId") userId: string,
+  ): Promise<PayCycleResponseDto[]> {
+    return this.findAllPayCyclesUseCase.execute(userId);
   }
 
   //   @Get(':id')
