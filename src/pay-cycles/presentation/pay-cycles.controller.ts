@@ -35,7 +35,6 @@ import { Roles } from "src/auth/application/decorators/roles.decorator";
 import { Role } from "src/auth/domain/role.enum";
 import { Request } from "express";
 import { AuthenticatedUser } from "src/auth/domain/authenticated-user";
-import { S } from "node_modules/@faker-js/faker/dist/airline-eVQV6kbz";
 
 @ApiTags("pay-cycles")
 @Controller("pay-cycles")
