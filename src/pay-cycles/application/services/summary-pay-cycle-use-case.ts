@@ -14,7 +14,7 @@ export class SummaryPayCycleUseCase {
 
   async getCycleSummary(userId: string, cycleStart?: string): Promise<CycleSummary> {
     const anchor = cycleStart ?? new Date().toISOString().split("T")[0];
-    const cycle = await this.resolutionPayCycleUseCase.getCycleForDate(anchor);
+    const cycle = await this.resolutionPayCycleUseCase.getCycleForDate(anchor, userId);
 
     return this.buildCycleSummary(userId, cycle);
   }
